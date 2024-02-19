@@ -1,4 +1,3 @@
-; Language: Assembly
         lui sp, %hi(0x10000)
         addi sp, sp, %lo(0x10000)
 
