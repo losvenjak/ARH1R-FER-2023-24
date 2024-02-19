@@ -1,0 +1,86 @@
+        lui sp, %hi(0x10000)
+        addi sp, sp, %lo(0x10000)
+
+        lui s0, %hi(0xffff0f00)
+        addi s0, s0, %lo(0xffff0f00)
+
+        lui s1, %hi(0xffff0b00)
+        addi s1, s1, %lo(0xffff0b00)
+
+        addi t0, x0, 0b11100000 ;tipka  ulazni
+        sw t0, 8(s1)    ;pa_ddr na gpio1
+
+        addi t0, x0, 0b00000000     ;lcd svi izlazni
+        sw t0, 12(s0)   ;pb_ddr na  gpio0
+
+        addi s2, x0, 0  ;brojac
+        addi s3, x0, 15 ;max
+
+sklopka
+        lw a0, 0(s1)
+        andi t0, a0, 0b00000010
+        bne t0, x0, tipka     ;sklopka 1 = zatvorena, ajde na tipku
+
+otv     addi s2, x0, 0  ;brojac na 0
+        beq t0, x0, sklopka
+
+tipka
+        lw a0, 0(s1)
+        andi t0, a0, 0b00000001
+        beq t0, x0, sklopka     ;tipka nije pritisnuta, provjeri je li sklopka još zatvorena pa opet tipku
+
+        bne s2, s3, ispisi
+        addi s2, x0, 0
+
+ispisi  addi s2, s2, 1  ;brojac++
+        add x13, x0, s2
+        jal ra, obradi  ;u x10 rez, x11 ostatak
+
+        addi a5, x0, 0x0d
+        jal ra, lcdwr
+        
+        addi t0, x0, 0x30
+        beq x10, t0, jed
+
+        add a5, x0, x10
+        jal ra, lcdwr
+jed     add a5, x0, x11
+        jal ra, lcdwr
+
+        addi a5, x0, 0x0a
+        jal ra, lcdwr
+
+        jal x0, sklopka     
+
+obradi        
+        addi sp, sp, -4
+        sw x14, 0(sp)
+        
+        add x11, x0, x13        ;ostatak
+        addi x10, x0, 0 ;rez
+        addi x14, x0, 10
+
+        bge x13, x14, loop
+        add x11, x0, x13
+        addi x10, x0, 0
+        jal x0, ascii
+
+loop    addi x11, x11, -10
+        addi x10, x10, 1
+        bge x11, x14, loop
+
+ascii   addi x10, x10, 0x30
+        addi x11, x11, 0x30
+
+        addi sp, sp, 4
+        jalr x0, 0(ra)
+
+lcdwr
+        andi a5, a5, 0b01111111
+        sw a5, 4(s0)
+        ori a5, a5, 0b10000000
+        sw a5, 4(s0)
+        andi a5, a5, 0b01111111
+        sw a5, 4(s0)
+
+        jalr x0, 0(ra)
